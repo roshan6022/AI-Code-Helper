@@ -1,7 +1,8 @@
-const express = require("express");
+import express from "express";
+import { streamOpenRouter } from "../../controller/codeController.js";
+
 const router = express.Router();
-const { streamOpenRouter } = require("../../controller/codeController.js");
 
 router.post("/stream", streamOpenRouter);
 
-module.exports = router;
+export default router;

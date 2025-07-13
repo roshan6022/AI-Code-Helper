@@ -1,8 +1,7 @@
-const fetch = (...args) =>
-  import("node-fetch").then(({ default: fetch }) => fetch(...args));
-const readline = require("readline");
+import fetch from "node-fetch";
+import readline from "readline";
 
-exports.streamOpenRouter = async (req, res) => {
+export const streamOpenRouter = async (req, res) => {
   try {
     const { prompt, model = "mistralai/mistral-7b-instruct" } = req.body;
 
@@ -13,7 +12,7 @@ exports.streamOpenRouter = async (req, res) => {
         headers: {
           Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "http://localhost:5173",
+          "HTTP-Referer": "http://localhost:5173", // Update this if deployed
           "X-Title": "AI Code Helper",
         },
         body: JSON.stringify({
@@ -26,20 +25,27 @@ exports.streamOpenRouter = async (req, res) => {
 
     if (!response.ok || !response.body) {
       const errorText = await response.text();
-      console.error("OpenRouter error:", errorText);
+      console.error("❌ OpenRouter error:", errorText);
       return res.status(500).send("Failed to connect to OpenRouter");
     }
 
+    // Set headers for Server-Sent Events (SSE)
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+    res.flushHeaders?.();
 
-    const rl = readline.createInterface({ input: response.body });
+    // Setup line reader for streamed response
+    const rl = readline.createInterface({
+      input: response.body,
+      crlfDelay: Infinity,
+    });
 
     rl.on("line", (line) => {
       line = line.trim();
 
-      if (!line.startsWith("data: ") || line.startsWith("data: :")) return;
+      if (!line.startsWith("data: ")) return;
+
       const jsonStr = line.replace("data: ", "");
 
       if (jsonStr === "[DONE]") {
@@ -51,7 +57,8 @@ exports.streamOpenRouter = async (req, res) => {
         const parsed = JSON.parse(jsonStr);
         const content = parsed.choices?.[0]?.delta?.content;
         if (content) {
-          res.write(`data: ${content}\n\n`);
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+          res.flush?.();
         }
       } catch (err) {
         console.error("❌ Failed to parse chunk:", jsonStr);
@@ -59,6 +66,7 @@ exports.streamOpenRouter = async (req, res) => {
     });
 
     rl.on("close", () => {
+      console.log("✅ Stream closed");
       res.end();
     });
   } catch (err) {

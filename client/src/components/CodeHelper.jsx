@@ -1,5 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import { explainCode, fixCode, completeCode } from "../api";
+import SyntaxRenderer from "./SyntaxRenderer"; // adjust the path as needed
+
+const modes = {
+  explain: explainCode,
+  fix: fixCode,
+  complete: completeCode,
+};
 
 export default function CodeHelper() {
   const [mode, setMode] = useState("explain");
@@ -17,24 +24,19 @@ export default function CodeHelper() {
     e.preventDefault();
     if (!input.trim()) return;
 
-    setMessages((prev) => [...prev, { sender: "user", text: input }]);
-    setInput("");
-
     if (mode === "fix" && !issue.trim()) {
       setError("Please describe the issue.");
       return;
     }
+
+    setMessages((prev) => [...prev, { sender: "user", text: input }]);
+    setInput("");
     setError("");
 
     try {
-      let result;
-      if (mode === "explain") {
-        result = await explainCode(input);
-      } else if (mode === "fix") {
-        result = await fixCode(input, issue);
-      } else {
-        result = await completeCode(input);
-      }
+      const handler = modes[mode];
+      const result =
+        mode === "fix" ? await handler(input, issue) : await handler(input);
 
       setMessages((prev) => [...prev, { sender: "assistant", text: result }]);
       setIssue("");
@@ -55,9 +57,11 @@ export default function CodeHelper() {
               onChange={(e) => setMode(e.target.value)}
               className="appearance-none bg-black text-white rounded-lg px-6 py-3 text-lg pr-12"
             >
-              <option value="explain">Explain</option>
-              <option value="fix">Fix</option>
-              <option value="complete">Complete</option>
+              {Object.keys(modes).map((m) => (
+                <option key={m} value={m}>
+                  {m[0].toUpperCase() + m.slice(1)}
+                </option>
+              ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
               <svg
@@ -86,6 +90,11 @@ export default function CodeHelper() {
 
         {/* Messages */}
         <div className="flex-grow overflow-auto py-8 space-y-6">
+          {messages.length === 0 && (
+            <div className="text-center text-gray-500 text-lg">
+              Start by typing your code snippet above ⌨️
+            </div>
+          )}
           {messages.map((msg, idx) => (
             <div
               key={idx}
@@ -94,16 +103,17 @@ export default function CodeHelper() {
               }`}
             >
               <div
-                className={`max-w-[70%] rounded-2xl px-6 py-5 leading-relaxed text-lg ${
+                className={`max-w-[70%] rounded-2xl px-3 py-2 leading-relaxed text-lg ${
                   msg.sender === "user"
                     ? "bg-black text-white"
                     : "bg-gray-100 text-gray-900"
                 }`}
               >
-                {msg.text}
+                <SyntaxRenderer text={msg.text} />
               </div>
             </div>
           ))}
+
           <div ref={messagesEndRef} />
         </div>
 
@@ -114,10 +124,11 @@ export default function CodeHelper() {
         >
           <textarea
             rows={1}
-            className="flex-grow rounded-xl px-5 py-4 text-lg bg-gray-100 text-black focus:outline-none"
-            placeholder="Type your message..."
+            className="flex-grow rounded-xl px-5 py-4 text-lg bg-gray-100 text-black focus:outline-none resize-none"
+            placeholder="Type your code or message..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onFocus={() => setError("")}
           />
           {mode === "fix" && (
             <input
@@ -125,11 +136,12 @@ export default function CodeHelper() {
               placeholder="Describe the issue"
               value={issue}
               onChange={(e) => setIssue(e.target.value)}
+              onFocus={() => setError("")}
             />
           )}
           <button
             type="submit"
-            className="bg-black hover:bg-gray-900 text-white px-7 py-4 rounded-xl text-lg font-semibold"
+            className="bg-black hover:bg-gray-900 text-white px-9 py-4   rounded-xl text-lg font-semibold"
           >
             Send
           </button>

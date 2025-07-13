@@ -1,14 +1,16 @@
-const express = require("express");
+import express from "express";
+import openRouter from "../openRouterClient.js";
+
 const router = express.Router();
-const openRouter = require("../openRouterClient");
 
 async function proxyToOpenRouter(prompt) {
   const payload = {
-    model: "gpt-3.5-turbo",
+    model: "mistralai/mistral-7b-instruct",
     messages: [{ role: "user", content: prompt }],
     temperature: 0.7,
     stream: false,
   };
+
   const resp = await openRouter.post("/chat/completions", payload);
   return resp.data.choices[0].message.content;
 }
@@ -46,4 +48,4 @@ router.post("/complete", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
