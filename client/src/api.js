@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:4000/api/code",
+  baseURL: "https://ai-code-helper-backend.onrender.com",
   timeout: 10000, // Optional: add timeout to avoid hanging
 });
 
