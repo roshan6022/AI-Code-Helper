@@ -17,16 +17,16 @@ const handleResponse = async (promise) => {
 };
 
 export const explainCode = (code) =>
-  handleResponse(api.post("/explain", { code })).then(
+  handleResponse(api.post("/api/code/explain", { code })).then(
     (data) => data.explanation
   );
 
 export const fixCode = (code, issueDescription) =>
-  handleResponse(api.post("/fix", { code, issueDescription })).then(
+  handleResponse(api.post("/api/code/fix", { code, issueDescription })).then(
     (data) => data.fixed
   );
 
 export const completeCode = (snippet) =>
-  handleResponse(api.post("/complete", { snippet })).then(
+  handleResponse(api.post("/api/code/complete", { snippet })).then(
     (data) => data.completion
   );
